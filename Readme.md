@@ -110,7 +110,7 @@ This project is licensed under the MIT License.
 
 ## ⚠️ Disclaimer & Copyright
 
-**Copyright © 2026 [Afshin Talebi]. All rights reserved.**
+**Copyright © 2026 Afshin Talebi. All rights reserved.**
 
 - **Educational Purpose:** This project is developed primarily as a portfolio piece and for educational purposes to demonstrate modern backend architecture, concurrent processing in Go, and Agentic AI integration.
 - **Third-Party Costs:** This application makes calls to the OpenAI API. Users are solely responsible for managing their own API keys and any associated costs or rate limits incurred while using this software.
