@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Go RAG Assistant</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f3f4f6; display: flex; justify-content: center; padding: 20px; }
+        #chat-container { width: 100%; max-width: 600px; background: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 20px; display: flex; flex-direction: column; height: 80vh; }
+        #messages { flex-grow: 1; overflow-y: auto; margin-bottom: 20px; padding-right: 10px; }
+        .msg { margin-bottom: 15px; padding: 10px 15px; border-radius: 8px; line-height: 1.5; }
+        .user-msg { background-color: #2563eb; color: white; align-self: flex-end; margin-left: auto; width: fit-content; max-width: 80%; }
+        .ai-msg { background-color: #e5e7eb; color: #1f2937; width: fit-content; max-width: 80%; white-space: pre-wrap;}
+        #input-area { display: flex; gap: 10px; }
+        input[type="text"] { flex-grow: 1; padding: 10px; border: 1px solid #d1d5db; border-radius: 5px; outline: none; }
+        button { padding: 10px 20px; background-color: #10b981; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        button:disabled { background-color: #9ca3af; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+
+<div id="chat-container">
+    <h2 style="text-align: center; margin-top: 0; color: #374151;">Go AI Agent 🚀</h2>
+    <div id="messages"></div>
+    <div id="input-area">
+        <input type="text" id="promptInput" placeholder="Ask something (e.g. scrape a wiki and ask)..." />
+        <button id="sendBtn" onclick="sendMessage()">Send</button>
+    </div>
+</div>
+
+<script>
+    const sessionId = "demo-user-" + Math.floor(Math.random() * 10000);
+    const messagesDiv = document.getElementById('messages');
+    const inputField = document.getElementById('promptInput');
+    const sendBtn = document.getElementById('sendBtn');
+
+    inputField.addEventListener("keypress", function(event) {
+        if (event.key === "Enter") sendMessage();
+    });
+
+    async function sendMessage() {
+        const prompt = inputField.value.trim();
+        if (!prompt) return;
+
+        // Append User Message
+        appendMessage(prompt, 'user-msg');
+        inputField.value = '';
+        sendBtn.disabled = true;
+
+        // Create AI Message placeholder
+        const aiMessageDiv = appendMessage('', 'ai-msg');
+
+        try {
+            const response = await fetch('/api/v1/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_id: sessionId, prompt: prompt })
+            });
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder('utf-8');
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value, { stream: true });
+                const lines = chunk.split('\n');
+                
+                for (const line of lines) {
+                    // Check if line contains data
+                    if (line.startsWith('data:')) {
+                        // EXTREMELY IMPORTANT: DO NOT USE .trim() HERE!
+                        // slice(5) removes exactly "data:" and keeps the spaces intact.
+                        let data = line.slice(5); 
+
+                        if (data === '[DONE]') {
+                            sendBtn.disabled = false;
+                            return;
+                        }
+                        
+                        // Append token to the AI message div
+                        aiMessageDiv.innerHTML += data.replace(/\\n/g, '<br>');
+                        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                    }
+                }
+            }
+        } catch (error) {
+            aiMessageDiv.innerHTML = "Error connecting to server.";
+        }
+        sendBtn.disabled = false;
+    }
+
+    function appendMessage(text, className) {
+        const div = document.createElement('div');
+        div.className = `msg ${className}`;
+        div.textContent = text;
+        messagesDiv.appendChild(div);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        return div;
+    }
+</script>
+
+</body>
+</html>
